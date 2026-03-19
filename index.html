@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ЗооКарта Омск - карта приютов для животных</title>
+    <!-- Подключаем Leaflet для карты -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+
+        body {
+            background: #f0f4f8;
+            color: #1a2b3c;
+        }
+
+        /* Верхняя полоса */
+        .top-bar {
+            background: #0f172a;
+            color: white;
+            padding: 0.7rem 0;
+            font-size: 0.9rem;
+            border-bottom: 3px solid #3b82f6;
+        }
+
+        .top-bar-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .city-name {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #fbbf24;
+            font-weight: 600;
+        }
+
+        .hotline {
+            background: #1e293b;
+            padding: 0.3rem 1rem;
+            border-radius: 30px;
+            color: #94a3b8;
+        }
+
+        /* Основная шапка */
+        .main-header {
+            background: white;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-block {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            font-size: 2.5rem;
+            line-height: 1;
+        }
+
+        .logo-text h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-text p {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .main-nav {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .main-nav a {
+            text-decoration: none;
+            color: #334155;
+            font-weight: 600;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .main-nav a:hover {
+            color: #2563eb;
+        }
+
+        .nav-highlight {
+            background: #2563eb;
+            color: white !important;
+            padding: 0.5rem 1.5rem;
+            border-radius: 30px;
+        }
+
+        .nav-highlight:hover {
+            background: #1d4ed8;
+            color: white !important;
+        }
+
+        /* Контейнер для карты */
+        .map-section {
+            padding: 2rem 30px;
+            background: white;
+        }
+
+        .map-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .map-title h2 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .map-title p {
+            color: #64748b;
+            font-size: 1.1rem;
+            margin-top: 0.5rem;
+        }
+
+        .map-filters {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: #f1f5f9;
+            border: none;
+            color: #334155;
+            padding: 0.7rem 1.5rem;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            background: #2563eb;
+            color: white;
+        }
+
+        .filter-btn.active {
+            background: #2563eb;
+            color: white;
+        }
+
+        /* Карта */
+        #map {
+            height: 500px;
+            width: 100%;
+            border-radius: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            z-index: 1;
+            margin-bottom: 2rem;
+        }
+
+        .map-legend {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            background: #f8fafc;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #475569;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        /* Секция с карточками */
+        .cards-section {
+            max-width: 1400px;
+            margin: 3rem auto;
+            padding: 0 30px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .section-header h3 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .shelters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .shelter-card {
+            background: white;
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .shelter-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 40px rgba(37,99,235,0.1);
+            border-color: #2563eb;
+        }
+
+        .shelter-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: #2563eb;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .shelter-card:hover::before {
+            opacity: 1;
+        }
+
+        .shelter-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+        }
+
+        .shelter-address {
+            color: #64748b;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .shelter-desc {
+            color: #475569;
+            font-size: 0.95rem;
+            margin: 1rem 0;
+            line-height: 1.5;
+        }
+
+        .shelter-stats {
+            display: flex;
+            gap: 1.5rem;
+            margin: 1.2rem 0;
+            padding: 1rem 0;
+            border-top: 1px solid #f1f5f9;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #2563eb;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .urgent-needs {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .need-tag {
+            background: #fee2e2;
+            color: #b91c1c;
+            padding: 0.3rem 1rem;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .need-tag.green {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        /* Модальное окно */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 2.5rem;
+            position: relative;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+            animation: modalAppear 0.3s ease-out;
+        }
+
+        @keyframes modalAppear {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            font-size: 2.5rem;
+            cursor: pointer;
+            color: #94a3b8;
+            transition: color 0.2s;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #0f172a;
+        }
+
+        .modal-shelter-name {
+            font-size: 2rem;
+            color: #0f172a;
+            margin-bottom: 1rem;
+            padding-right: 30px;
+        }
+
+        .modal-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 20px;
+            margin: 1.5rem 0;
+        }
+
+        .modal-info-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #334155;
+        }
+
+        .modal-info-item span:first-child {
+            font-size: 1.2rem;
+        }
+
+        .modal-description {
+            color: #475569;
+            line-height: 1.7;
+            margin: 1.5rem 0;
+            padding: 1rem 0;
+            border-top: 2px solid #f1f5f9;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .modal-needs-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 1.5rem 0 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-needs-list {
+            list-style: none;
+        }
+
+        .modal-need-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.2rem;
+            background: #f8fafc;
+            border-radius: 12px;
+            margin-bottom: 0.8rem;
+            border-left: 4px solid #2563eb;
+        }
+
+        .modal-need-name {
+            font-weight: 600;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .modal-need-urgent {
+            background: #ef4444;
+            color: white;
+            padding: 0.2rem 1rem;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .modal-need-status {
+            background: #e2e8f0;
+            padding: 0.3rem 1rem;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .modal-contacts {
+            display: flex;
+            gap: 1rem;
+            margin: 2rem 0 1rem;
+            flex-wrap: wrap;
+        }
+
+        .modal-contact-btn {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+            min-width: 150px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .modal-contact-btn.call {
+            background: #2563eb;
+            color: white;
+        }
+
+        .modal-contact-btn.call:hover {
+            background: #1d4ed8;
+        }
+
+        .modal-contact-btn.map {
+            background: #f1f5f9;
+            color: #334155;
+        }
+
+        .modal-contact-btn.map:hover {
+            background: #e2e8f0;
+        }
+
+        /* Подвал */
+        .footer {
+            background: #0f172a;
+            color: white;
+            padding: 3rem 30px 1rem;
+            margin-top: 4rem;
+        }
+
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .footer-content p {
+            color: #94a3b8;
+            line-height: 1.8;
+        }
+
+        .footer-bottom {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #1e293b;
+            text-align: center;
+            color: #64748b;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 1024px) {
+            .modal-info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .main-nav {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .map-header {
+                flex-direction: column;
+                align-items: start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Верхняя полоса -->
+    <div class="top-bar">
+        <div class="top-bar-content">
+            <div class="city-name">
+                <span>📍</span>
+                <span>город Омск</span>
+            </div>
+            <div class="hotline">
+                ☎️ Помощь животным: 8 (3812) 123-456
+            </div>
+        </div>
+    </div>
+
+    <!-- Основная шапка -->
+    <header class="main-header">
+        <div class="header-container">
+            <div class="logo-block">
+                <span class="logo-icon">🐾</span>
+                <div class="logo-text">
+                    <h1>ЗооКарта Омск</h1>
+                    <p>приюты для животных</p>
+                </div>
+            </div>
+            <nav class="main-nav">
+                <a href="#"><span>🗺️</span> Карта</a>
+                <a href="#"><span>🏥</span> Приюты</a>
+                <a href="#"><span>📞</span> Контакты</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Секция с картой -->
+    <section class="map-section">
+        <div class="map-container">
+            <div class="map-header">
+                <div class="map-title">
+                    <h2>Карта приютов Омска</h2>
+                    <p>Найдите ближайший приют и узнайте, какая помощь нужна прямо сейчас</p>
+                </div>
+                <div class="map-filters">
+                    <button class="filter-btn active" onclick="filterMarkers('all')">Все приюты</button>
+                </div>
+            </div>
+            
+            <!-- Карта Омска -->
+            <div id="map"></div>
+            
+            <!-- Легенда -->
+            <div class="map-legend">
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #2563eb;"></span>
+                    <span>Приюты для животных</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Секция с карточками приютов -->
+    <section class="cards-section">
+        <div class="section-header">
+            <h3>🏥 Приюты Омска</h3>
+        </div>
+
+        <div class="shelters-grid" id="sheltersGrid">
+            <!-- Карточки будут добавлены через JavaScript -->
+        </div>
+    </section>
+
+    <!-- Модальное окно приюта -->
+    <div class="modal" id="shelterModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <div id="modalContent">
+                <!-- Контент будет заполняться динамически -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Подвал -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>🐾 ЗооКарта Омск — информационный проект о приютах для животных города Омска</p>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2024 ЗооКарта. Информация из открытых источников.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Данные приютов Омска (на основе поисковых результатов)
+        const shelters = [
+
+            {
+                id: 1,
+                name: "АНО 'Бездомный Ангел'",
+                type: "shelter",
+                address: "Советская улица, 21 Апатиты, Мурманская область, 184209",
+                phone: "+7‒921‒033‒47‒43",
+                email: "bezdomnyi.angel@omsk.ru",
+                schedule: "понедельник - выходной, вт - ср 10:00-15:00, четверг - выходной, пятница - 10:00-15:00, Суббота - Выходной",
+                          "",
+                          "четверг - выходной",
+                          " пятница - 10:00-15:00",
+                          "Суббота - Выходной",
+                          "Воскресенье - ",
+                animals: 50,
+                volunteers: 5,
+                description: "Автономная некоммерческая организация помощи животным. Занимается содержанием животных, включая бездомных и тех, от которых отказались владельцы [citation:1][citation:5].",
+                fullDescription: "Организация зарегистрирована 30 августа 2024 года. Основной вид деятельности - деятельность приютов по содержанию животных, в том числе животных без владельцев, животных, от права собственности на которых владельцы отказались. Директор: Зотина Наталья Сергеевна [citation:1][citation:5].",
+                coordinates: [54.9824, 73.3586],
+                needs: [
+                    { name: "Корма для животных", urgent: true },
+                    { name: "Лекарства", urgent: true },
+                    { name: "Поводки и амуниция", urgent: false }
+                ]
+            },{
+             id: 2,
+                name: "Заяц",
+                type: "shelter",
+                address: "Улица Красный путь,105В",
+                phone: "+7 (3812) 79-04-04",
+                email: "zaisy.ru",
+                schedule: "ужедневно 9:00 до 21:00",
+                animals: 80,
+                description: "Благотворительный фонд помощи животным в Омске [citation:9].",
+                fullDescription: "Фонд занимается помощью бездомным животным, организует сбор средств и кормов, ищет новых хозяев для подопечных. Работает при поддержке волонтёров.",
+                coordinates: [54.9724, 73.3786],
+                needs: [
+                    { name: "Финансовая помощь", urgent: true },
+                    { name: "Корма", urgent: true },
+                    { name: "Волонтёры для выгула", urgent: true }
+                ]
+            },
+            {
+                id: 3,
+                name: "Омские хвостики",
+                type: "shelter",
+                address: "1-я Казахстанская ул, 3 ст2",
+                phone: "+7 (3812) 49-87-66",
+                email: "www.hvostik-omsk.ru",
+                schedule: "пн-сб 12:00 до 18:00",
+                animals: 80,
+                description: "Благотворительный фонд помощи животным в Омске [citation:9].",
+                fullDescription: "Фонд занимается помощью бездомным животным, организует сбор средств и кормов, ищет новых хозяев для подопечных. Работает при поддержке волонтёров.",
+                coordinates: [54.9724, 73.3786],
+                needs: [
+                    { name: "Финансовая помощь", urgent: true },
+                    { name: "Корма", urgent: true },
+                    { name: "Волонтёры для выгула", urgent: true }
+                ]
+            },
+            {
+                id: 4,
+                name: "Друг",
+                type: "shelter",
+                address: "2-я Учхозная ул, 2а",
+                phone: "+7‒903‒927‒22‒72",
+                email: "dog.shelter@omsk.ru",
+                schedule: "Ежедневно с 12:00 до 16:00",
+                animals: 120,
+                volunteers: 8,
+                description: "Специализированный приют для собак [citation:9].",
+                fullDescription: "Приют для собак, нуждающихся в помощи и лечении. Требуются волонтёры для выгула и ухода за животными. Работают круглый год.",
+                coordinates: [55.0024, 73.3486],
+                needs: [
+                    { name: "Корм для крупных пород", urgent: true },
+                    { name: "Вольеры (б/у)", urgent: true },
+                    { name: "Тёплые лежаки", urgent: true }
+                ]
+            },
+            {
+                id: 5,
+                name: "Джульбарс и его друзья ",
+                type: "shelter",
+                address: "ул. Масленникова, 80",
+                phone: "+7‒960‒982‒08‒73",
+                email: "https://vk.com/club184979277",
+                schedule: "Ежедневно с 09:00 до 21:00",
+                animals: 40,
+                volunteers: 12,
+                description: "Точка сбора помощи для приюта-хоспис [citation:9].",
+                fullDescription: "Специализированный приют-хоспис для тяжелобольных и старых животных. Нуждается в медикаментах, специальном питании и заботливых руках.",
+                coordinates: [54.9624, 73.3986],
+                needs: [
+                    { name: "Лекарства (обезболивающие)", urgent: true },
+                    { name: "Лечебные корма", urgent: true },
+                    { name: "Пеленки", urgent: true }
+                ]
+            }, 
+        ];
+
+        // Инициализация карты Омска
+        let map;
+        let markers = [];
+
+        function initMap() {
+            // Координаты центра Омска: 54.9924, 73.3686 [citation:10]
+            map = L.map('map').setView([54.9924, 73.3686], 12);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Добавляем маркеры приютов
+            shelters.forEach(shelter => {
+                const icon = L.divIcon({
+                    html: '<div style="background: #2563eb; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">🏥</div>',
+                    className: 'custom-marker',
+                    iconSize: [30, 30]
+                });
+
+                const marker = L.marker(shelter.coordinates, { icon }).addTo(map);
+                marker.shelterId = shelter.id;
+                
+                marker.on('click', () => {
+                    openShelterModal(shelter.id);
+                });
+
+                markers.push(marker);
+            });
+        }
+
+        // Фильтрация маркеров
+        function filterMarkers(type) {
+            // Для Омска показываем все приюты
+            markers.forEach(marker => {
+                map.addLayer(marker);
+            });
+
+            // Обновляем активную кнопку
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        // Отображение карточек приютов
+        function displayShelterCards() {
+            const grid = document.getElementById('sheltersGrid');
+            grid.innerHTML = shelters.map(shelter => `
+                <div class="shelter-card" onclick="openShelterModal(${shelter.id})">
+                    <h3 class="shelter-name">${shelter.name}</h3>
+                    <div class="shelter-address">
+                        <span>📍</span> ${shelter.address}
+                    </div>
+                    <p class="shelter-desc">${shelter.description}</p>
+                    <div class="shelter-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">${shelter.animals}</div>
+                            <div class="stat-label">питомцев</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${shelter.volunteers}</div>
+                            <div class="stat-label">волонтёров</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${shelter.needs.filter(n => n.urgent).length}</div>
+                            <div class="stat-label">срочно</div>
+                        </div>
+                    </div>
+                    <div class="urgent-needs">
+                        ${shelter.needs.filter(n => n.urgent).slice(0, 3).map(n => 
+                            `<span class="need-tag">${n.name}</span>`
+                        ).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Открытие модального окна приюта
+        function openShelterModal(id) {
+            const shelter = shelters.find(s => s.id === id);
+            if (!shelter) return;
+
+            const modalContent = document.getElementById('modalContent');
+            modalContent.innerHTML = `
+                <h2 class="modal-shelter-name">${shelter.name}</h2>
+                
+                <div class="modal-info-grid">
+                    <div class="modal-info-item">
+                        <span>📍</span>
+                        <span>${shelter.address}</span>
+                    </div>
+                    <div class="modal-info-item">
+                        <span>📞</span>
+                        <span>${shelter.phone}</span>
+                    </div>
+                    <div class="modal-info-item">
+                        <span>✉️</span>
+                        <span>${shelter.email}</span>
+                    </div>
+                    <div class="modal-info-item">
+                        <span>🕒</span>
+                        <span>${shelter.schedule}</span>
+                    </div>
+                    <div class="modal-info-item">
+                        <span>🐕</span>
+                        <span>Питомцев: ${shelter.animals}</span>
+                    </div>
+                    <div class="modal-info-item">
+                        <span>👥</span>
+                        <span>Волонтёров: ${shelter.volunteers}</span>
+                    </div>
+                </div>
+
+                <div class="modal-description">
+                    <strong>О приюте:</strong><br><br>
+                    ${shelter.fullDescription}
+                </div>
+
+                <div class="modal-needs-title">
+                    <span>📋 Что требуется прямо сейчас</span>
+                </div>
+                
+                <ul class="modal-needs-list">
+                    ${shelter.needs.map(need => `
+                        <li class="modal-need-item">
+                            <span class="modal-need-name">
+                                ${need.name}
+                                ${need.urgent ? '<span class="modal-need-urgent">Срочно!</span>' : ''}
+                            </span>
+                            <span class="modal-need-status">Требуется</span>
+                        </li>
+                    `).join('')}
+                </ul>
+
+                <div class="modal-contacts">
+                    <a href="tel:${shelter.phone}" class="modal-contact-btn call">
+                        <span>📞</span> Позвонить
+                    </a>
+                    <button class="modal-contact-btn map" onclick="showOnMap(${shelter.coordinates[0]}, ${shelter.coordinates[1]})">
+                        <span>🗺️</span> На карте
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('shelterModal').classList.add('active');
+        }
+
+        // Показать на карте
+        function showOnMap(lat, lng) {
+            closeModal();
+            map.setView([lat, lng], 16);
+        }
+
+        // Закрыть модальное окно
+        function closeModal() {
+            document.getElementById('shelterModal').classList.remove('active');
+        }
+
+        // Закрытие по клику вне окна
+        window.onclick = function(event) {
+            const modal = document.getElementById('shelterModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        };
+
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+            displayShelterCards();
+        });
+    </script>
+</body>
+</html>
